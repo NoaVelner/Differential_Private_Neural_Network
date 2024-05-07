@@ -97,7 +97,7 @@ class FullyConnectedLayer:
         m_weights, v_weights = self.update_parameters({'param': self.weights, 'm': self.m_weights, 'v': self.v_weights},
                                                       d_weights, t, learning_rate)
         m_biases, v_biases = self.update_parameters({'param': self.biases, 'm': self.m_biases, 'v': self.v_biases},
-                                                    d_biases, t, learning_rate)
+                                                     d_biases, t, learning_rate)
         return d_inputs
 
     def update_parameters(self, parameters, d_parameters, t, learning_rate):
