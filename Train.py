@@ -1,6 +1,6 @@
 from typing import List
 import numpy as np
-from Layer import FullyConnectedLayer # Import custom layer
+from Layer import FullyConnectedLayer  # Import custom layer
 import matplotlib.pyplot as plt
 
 # load data & preprocessing
