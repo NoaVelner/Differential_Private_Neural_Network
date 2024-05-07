@@ -135,7 +135,6 @@ class CreateModel:
 
 
 
-
 if __name__ == "__main__":
     input_shape = 784
     hidden_shape = [512, 512]

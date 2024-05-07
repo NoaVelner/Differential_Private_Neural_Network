@@ -72,7 +72,6 @@ class FullyConnectedLayer:
         derivative once with respect to the bias and oe with respect to the weight.
         Those values might be very small, so we will clip them to keep numerical stability.
 
-
         Args:
             d_values (float): Derivative of the output
             learning_rate (float): Learning rate for gradient descent
