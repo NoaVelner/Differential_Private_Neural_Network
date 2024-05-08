@@ -12,6 +12,7 @@ class FullyConnectedLayer:
             output_size (int): Output of the layer
             activation (str): activation function
         """
+        self.x = None
         self.activation = activation
 
         # Initialize weights and biases
@@ -94,9 +95,9 @@ class FullyConnectedLayer:
         self.biases -= learning_rate * d_biases
 
         # Update weights & biases using m and v values
-        m_weights, v_weights = self.update_parameters({'param': self.weights, 'm': self.m_weights, 'v': self.v_weights},
+        self.update_parameters({'param': self.weights, 'm': self.m_weights, 'v': self.v_weights},
                                                       d_weights, t, learning_rate)
-        m_biases, v_biases = self.update_parameters({'param': self.biases, 'm': self.m_biases, 'v': self.v_biases},
+        self.update_parameters({'param': self.biases, 'm': self.m_biases, 'v': self.v_biases},
                                                     d_biases, t, learning_rate)
         return d_inputs
 
@@ -120,7 +121,6 @@ class FullyConnectedLayer:
 
         # Update parameters
         parameters['param'] -= learning_rate * m_hat / (np.sqrt(v_hat) + self.epsilon)
-        return m, v
 
     def clipping(self, d_biases, d_weights):
         """

@@ -1,7 +1,7 @@
 from typing import List
 import numpy as np
+import Utils
 from Layer import FullyConnectedLayer  # Import custom layer
-import matplotlib.pyplot as plt
 
 # load data & preprocessing
 from tensorflow.keras.datasets import mnist
@@ -60,8 +60,8 @@ class CreateModel:
         for epoch in range(n_epochs):
             output = self.forward(inputs=inputs)
 
-            loss = self.calculate_loss_crossentropy(output, targets)
-            accuracy = self.accuracy(output, targets)
+            loss = Utils.calculate_loss_crossentropy(output, targets)
+            accuracy = Utils.accuracy(output, targets)
             self.backward(decay, epoch, initial_learning_rate, output, targets, time)
 
             if plot_training_results:
@@ -70,7 +70,7 @@ class CreateModel:
             print(f"Epoch {epoch} \nLoss: {loss} \nAccuracy: {accuracy}")
 
         if plot_training_results:
-            self.plot_training(accuracy_log, loss_log, n_epochs)
+            Utils.plot_training(accuracy_log, loss_log, n_epochs)
 
     def backward(self, decay, epoch, initial_learning_rate, output, targets, time):
         output_grad = 6 * (output - targets) / output.shape[0]
@@ -80,72 +80,23 @@ class CreateModel:
         grad_2 = self.layer2.backward(grad_3, learning_rate, time)
         grad_1 = self.layer1.backward(grad_2, learning_rate, time)
 
-    def plot_training(self, accuracy_log: List[float], loss_log: List[float], n_epochs: int) -> None:
-        """
-        Plots the training curves.
 
-        Args:
-            accuracy_log (List[float]): List of accuracies.
-            loss_log (List[float]): List of losses.
-            n_epochs (int): Number of training epochs.
-        """
-        plt.plot(range(n_epochs), loss_log, label='Training Loss')
-        plt.xlabel('Epoch')
-        plt.ylabel('Loss')
-        plt.title('Training Loss Curve')
-        plt.legend()
-        plt.show()
-        plt.plot(range(n_epochs), accuracy_log, label='Training Accuracy')
-        plt.xlabel('Epoch')
-        plt.ylabel('Accuracy')
-        plt.title('Training Accuracy Curve')
-        plt.legend()
-        plt.show()
+def load_mnist():
+    (X_train, Y_train), (X_test, Y_test) = mnist.load_data()
 
-    def accuracy(self, output: np.ndarray, targets: np.ndarray) -> float:
-        """
-        Calculates the accuracy of the model predictions.
-
-        Args:
-            output (Tensor): Model predictions of shape (num_samples, output_size).
-            targets (Tensor): Target labels of shape (num_samples, output_size).
-
-        Returns:
-            float: Accuracy value.
-        """
-        predicted_labels = np.argmax(output, axis=1)
-        true_labels = np.argmax(targets, axis=1)
-        accuracy = np.mean(predicted_labels == true_labels)
-        return accuracy
-
-    def calculate_loss_crossentropy(self, output, targets):
-        """
-        Calculates the categorical cross-entropy loss.
-
-        Args:
-            output (Tensor): Model predictions of shape (num_samples, output_size).
-            targets (Tensor): Target labels of shape (num_samples, output_size).
-
-        Returns:
-            float: Categorical cross-entropy loss value.
-        """
-        epsilon = 1e-10
-        loss = -np.mean(targets * np.log(output + epsilon))
-        return loss
+    # Flatten the images
+    X_train = X_train.reshape((60000, 784))
+    X_train = X_train.astype("float32") / 255.0
+    Y_train = to_categorical(Y_train)
+    return X_train, Y_train, X_test, Y_test
 
 
 if __name__ == "__main__":
+    x_train, y_train, x_test, y_test = load_mnist()
+
     input_shape = 784
     hidden_shape = [512, 512]
     output_shape = 10
-
-    (x_train, y_train), (x_test, y_test) = mnist.load_data()
-
-    # Flatten the images
-    x_train = x_train.reshape((60000, 784))
-    x_train = x_train.astype("float32") / 255.0
-
-    y_train = to_categorical(y_train)
 
     nn = CreateModel(input_size=input_shape, output_size=output_shape, hidden_size=hidden_shape)
     nn.train(x_train, y_train, initial_learning_rate=0.001, decay=0.001, n_epochs=200, plot_training_results=True)
