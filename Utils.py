@@ -29,15 +29,9 @@ def plot_training(accuracy_log: List[float], loss_log: List[float], n_epochs: in
         n_epochs (int): Number of training epochs.
     """
     plt.plot(range(n_epochs), loss_log, label='Training Loss')
-    plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.title('Training Loss Curve')
-    plt.legend()
-    plt.show()
     plt.plot(range(n_epochs), accuracy_log, label='Training Accuracy')
     plt.xlabel('Epoch')
-    plt.ylabel('Accuracy')
-    plt.title('Training Accuracy Curve')
+    plt.title('Training Loss and Accuracy')
     plt.legend()
     plt.show()
 

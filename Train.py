@@ -52,7 +52,6 @@ class CreateModel:
             decay (float): Learning rate decay factor.
             plot_training_results (bool, optional): Whether to plot training results. Defaults = False.
         """
-        # Initialize timestamp and accuracy & loss.
         time = 0
         loss_log = []
         accuracy_log = []
@@ -62,12 +61,14 @@ class CreateModel:
 
             loss = Utils.calculate_loss_crossentropy(output, targets)
             accuracy = Utils.accuracy(output, targets)
+
             self.backward(decay, epoch, initial_learning_rate, output, targets, time)
 
             if plot_training_results:
                 loss_log.append(loss)
                 accuracy_log.append(accuracy)
-            print(f"Epoch {epoch} \nLoss: {loss} \nAccuracy: {accuracy}")
+            if epoch % 5 == 0:
+                print(f"Epoch {epoch} // Loss: {loss} // Accuracy: {accuracy}")
 
         if plot_training_results:
             Utils.plot_training(accuracy_log, loss_log, n_epochs)
@@ -83,12 +84,44 @@ class CreateModel:
 
 def load_mnist():
     (X_train, Y_train), (X_test, Y_test) = mnist.load_data()
-
-    # Flatten the images
     X_train = X_train.reshape((60000, 784))
     X_train = X_train.astype("float32") / 255.0
     Y_train = to_categorical(Y_train)
     return X_train, Y_train, X_test, Y_test
+
+
+def test_loss(model, x_test, y_test):
+    """
+    Calculate the test loss of the model.
+
+    Args:
+        model (CreateModel): The trained neural network model.
+        x_test (np.ndarray): Test input data of shape (num_samples, input_size).
+        y_test (np.ndarray): Test target labels of shape (num_samples, output_size).
+
+    Returns:
+        float: Test loss.
+    """
+    predictions = model.forward(inputs=x_test)
+    return Utils.calculate_loss_crossentropy(predictions, y_test)
+
+
+def test_accuracy(model, x_test, y_test):
+    """
+    Calculate the test accuracy of the model.
+
+    Args:
+        model (CreateModel): The trained neural network model.
+        x_test (np.ndarray): Test input data of shape (num_samples, input_size).
+        y_test (np.ndarray): Test target labels of shape (num_samples, output_size).
+
+    Returns:
+        float: Test accuracy.
+    """
+    predictions = model.forward(inputs=x_test)
+    predictions = np.argmax(predictions, axis=1)
+    y_test = np.argmax(y_test, axis=1)
+    return np.mean(predictions == y_test)
 
 
 if __name__ == "__main__":
@@ -97,6 +130,10 @@ if __name__ == "__main__":
     input_shape = 784
     hidden_shape = [512, 512]
     output_shape = 10
+    x_test = x_test.reshape((x_test.shape[0], -1))
+    y_test = to_categorical(y_test, num_classes=output_shape)
 
     nn = CreateModel(input_size=input_shape, output_size=output_shape, hidden_size=hidden_shape)
-    nn.train(x_train, y_train, initial_learning_rate=0.001, decay=0.001, n_epochs=200, plot_training_results=True)
+    nn.train(x_train, y_train, initial_learning_rate=0.001, decay=0.001, n_epochs=100, plot_training_results=True)
+    print("Test Loss:",test_loss(nn, x_test, y_test))
+    print("Test Accuracy:", test_accuracy(nn, x_test, y_test))

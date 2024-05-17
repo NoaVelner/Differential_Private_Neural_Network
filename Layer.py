@@ -43,7 +43,8 @@ class FullyConnectedLayer:
 
         """
         self.x = x
-        z = np.dot(self.x, self.weights) + self.biases
+        z = (self.x @ self.weights) + self.biases
+        # z = np.dot(self.x, self.weights) + self.biases  # using np.dot instead of @, might be less efficient
 
         self.activate_activation_function(z)
         return self.output
@@ -82,13 +83,15 @@ class FullyConnectedLayer:
         """
         d_values = self.derivative_activation_function(d_values)
 
-        d_weights = np.dot(self.x.T, d_values)
+        d_weights = self.x.T @ d_values
+        # d_weights = np.dot(self.x.T, d_values)                #using np.dot instead of @, might be less efficient
         d_biases = np.sum(d_values, axis=0, keepdims=True)
 
         d_biases, d_weights = self.clipping(d_biases, d_weights)
 
         # Calculate the gradient with respect to the input
-        d_inputs = np.dot(d_values, self.weights.T)
+        d_inputs = d_values @ self.weights.T
+        # d_inputs = np.dot(d_values, self.weights.T)
 
         # Update the weights and biases using the learning rate and their derivatives
         self.weights -= learning_rate * d_weights
@@ -119,7 +122,6 @@ class FullyConnectedLayer:
         m_hat = m / (1 - self.beta1 ** t)
         v_hat = v / (1 - self.beta2 ** t)
 
-        # Update parameters
         parameters['param'] -= learning_rate * m_hat / (np.sqrt(v_hat) + self.epsilon)
 
     def clipping(self, d_biases, d_weights):
@@ -151,7 +153,8 @@ class FullyConnectedLayer:
             for i, gradient in enumerate(d_values):
                 if len(gradient.shape) == 1:  # single instance case
                     gradient = gradient.reshape(-1, 1)
-                jacobian_matrix = np.diagflat(gradient) - np.dot(gradient, gradient.T)
+                jacobian_matrix = np.diagflat(gradient) - (gradient @ gradient.T)
+                # jacobian_matrix = np.diagflat(gradient) - np.dot(gradient, gradient.T)  #np.dot replaced with @
                 d_values[i] = np.dot(jacobian_matrix, self.output[i])
 
         # Calculate the derivative of the ReLU function
