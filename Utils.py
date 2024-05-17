@@ -50,3 +50,4 @@ def calculate_loss_crossentropy(output, targets):
     epsilon = 1e-10
     loss = -np.mean(targets * np.log(output + epsilon))
     return loss
+
