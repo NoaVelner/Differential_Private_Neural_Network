@@ -161,3 +161,4 @@ class FullyConnectedLayer:
         elif self.activation == "relu":
             d_values = d_values * (self.output > 0)
         return d_values
+

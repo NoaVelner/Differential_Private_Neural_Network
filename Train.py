@@ -89,7 +89,6 @@ def load_mnist():
     Y_train = to_categorical(Y_train)
     return X_train, Y_train, X_test, Y_test
 
-
 def test_loss(model, x_test, y_test):
     """
     Calculate the test loss of the model.
