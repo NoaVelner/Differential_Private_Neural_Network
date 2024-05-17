@@ -163,6 +163,6 @@ if __name__ == "__main__":
     y_test = to_categorical(y_test, num_classes=output_shape)
 
     nn = CreateModel(input_size=input_shape, output_size=output_shape, hidden_size=hidden_shape)
-    nn.train(x_train, y_train, initial_learning_rate=0.001, decay=0.001, n_epochs=10, plot_training_results=True)
+    nn.train(x_train, y_train, initial_learning_rate=0.001, decay=0.001, n_epochs=100, plot_training_results=True)
     print("Test Loss:", test_loss(nn, x_test, y_test))
     print("Test Accuracy:", test_accuracy(nn, x_test, y_test))
