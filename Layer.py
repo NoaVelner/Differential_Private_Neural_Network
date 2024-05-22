@@ -61,8 +61,7 @@ class FullyConnectedLayer:
 
         elif self.activation == "softmax":
             exp_values = np.exp(z - np.max(z, axis=-1, keepdims=True))
-            sum_values = np.sum(exp_values, axis=-1, keepdims=True)
-            self.output = exp_values / sum_values
+            self.output = exp_values / np.sum(exp_values, axis=-1, keepdims=True)
 
         else:
             raise ValueError(f"Please define new activation function for the activation you gave")
@@ -135,9 +134,10 @@ class FullyConnectedLayer:
         Returns:
             Tuple[Tensor, Tensor]: Clipped gradients.
         """
-        d_weights = np.clip(d_weights, -1.0, 1.0)
-        d_biases = np.clip(d_biases, -1.0, 1.0)
-        return d_biases, d_weights
+        # d_weights = np.clip(d_weights, -1.0, 1.0)
+        # d_biases = np.clip(d_biases, -1.0, 1.0)
+        # return d_biases, d_weights
+        return np.clip(d_biases, -1.0, 1.0), np.clip(d_weights, -1.0, 1.0)
 
     def derivative_activation_function(self, d_values: np.ndarray) -> np.ndarray:
         """
@@ -155,10 +155,10 @@ class FullyConnectedLayer:
                     gradient = gradient.reshape(-1, 1)
                 jacobian_matrix = np.diagflat(gradient) - (gradient @ gradient.T)
                 # jacobian_matrix = np.diagflat(gradient) - np.dot(gradient, gradient.T)  #np.dot replaced with @
-                d_values[i] = np.dot(jacobian_matrix, self.output[i])
+                d_values[i] = jacobian_matrix@ self.output[i]
+                # d_values[i] = np.dot(jacobian_matrix, self.output[i])
 
         # Calculate the derivative of the ReLU function
         elif self.activation == "relu":
-            d_values = d_values * (self.output > 0)
+            d_values *= (self.output > 0)
         return d_values
-

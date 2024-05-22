@@ -99,6 +99,42 @@ class CreateModel:
         grad_2 = self.layer2.backward(grad_3, learning_rate, time)
         grad_1 = self.layer1.backward(grad_2, learning_rate, time)
 
+    def get_prediction(self, samples):
+        return self.forward(inputs=samples)
+
+    def test_loss(self, x_test: np.ndarray, y_test: np.ndarray) -> float:
+        """
+        Calculate the test loss of the model.
+
+        Args:
+            model (CreateModel): The trained neural network model.
+            x_test (np.ndarray): Test input data of shape (num_samples, input_size).
+            y_test (np.ndarray): Test target labels of shape (num_samples, output_size).
+
+        Returns:
+            float: Test loss.
+        """
+        predictions = self.get_prediction(x_test)
+        return Utils.calculate_loss_crossentropy(predictions, y_test)
+
+    def test_accuracy(self, x_test: np.ndarray, y_test: np.ndarray) -> float:
+        """
+        Calculate the test accuracy of the model.
+
+        Args:
+            model (CreateModel): The trained neural network model.
+            x_test (np.ndarray): Test input data of shape (num_samples, input_size).
+            y_test (np.ndarray): Test target labels of shape (num_samples, output_size).
+
+        Returns:
+            float: Test accuracy.
+        """
+        # predictions = model.forward(inputs=x_test)
+        predictions = self.get_prediction(x_test)
+        predictions = np.argmax(predictions, axis=1)
+        y_test = np.argmax(y_test, axis=1)
+        return np.mean(predictions == y_test)
+
 
 def load_mnist() -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
@@ -114,44 +150,6 @@ def load_mnist() -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     return X_train, Y_train, X_test, Y_test
 
 
-def get_prediction(model: CreateModel, samples):
-    return model.forward(inputs=samples)
-
-
-def test_loss(model: CreateModel, x_test: np.ndarray, y_test: np.ndarray) -> float:
-    """
-    Calculate the test loss of the model.
-
-    Args:
-        model (CreateModel): The trained neural network model.
-        x_test (np.ndarray): Test input data of shape (num_samples, input_size).
-        y_test (np.ndarray): Test target labels of shape (num_samples, output_size).
-
-    Returns:
-        float: Test loss.
-    """
-    predictions = get_prediction(model, x_test)
-    return Utils.calculate_loss_crossentropy(predictions, y_test)
-
-
-def test_accuracy(model: CreateModel, x_test: np.ndarray, y_test: np.ndarray) -> float:
-    """
-    Calculate the test accuracy of the model.
-
-    Args:
-        model (CreateModel): The trained neural network model.
-        x_test (np.ndarray): Test input data of shape (num_samples, input_size).
-        y_test (np.ndarray): Test target labels of shape (num_samples, output_size).
-
-    Returns:
-        float: Test accuracy.
-    """
-    # predictions = model.forward(inputs=x_test)
-    predictions = get_prediction(model, x_test)
-    predictions = np.argmax(predictions, axis=1)
-    y_test = np.argmax(y_test, axis=1)
-    return np.mean(predictions == y_test)
-
 
 if __name__ == "__main__":
     x_train, y_train, x_test, y_test = load_mnist()
@@ -164,5 +162,5 @@ if __name__ == "__main__":
 
     nn = CreateModel(input_size=input_shape, output_size=output_shape, hidden_size=hidden_shape)
     nn.train(x_train, y_train, initial_learning_rate=0.001, decay=0.001, n_epochs=100, plot_training_results=True)
-    print("Test Loss:", test_loss(nn, x_test, y_test))
-    print("Test Accuracy:", test_accuracy(nn, x_test, y_test))
+    print("Test Loss:", nn.test_loss(x_test, y_test))
+    print("Test Accuracy:", nn.test_accuracy(x_test, y_test))
