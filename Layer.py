@@ -88,9 +88,10 @@ class FullyConnectedLayer:
 
         d_biases, d_weights = self.clipping(d_biases, d_weights, clipping_radius) # todo check the clipping method
 
-        # Add noise for differential privacy - 27.5
-        d_weights += np.random.normal(0, noise_factor, size=d_weights.shape) # todo check if add noise to both of them
-        d_biases += np.random.normal(0, noise_factor, size=d_biases.shape)
+        if noise_factor!=0:
+            # Add noise for differential privacy - 27.5
+            d_weights += np.random.normal(0, noise_factor, size=d_weights.shape) # todo check if add noise to both of them
+            d_biases += np.random.normal(0, noise_factor, size=d_biases.shape)
 
         # Calculate the gradient with respect to the input
         d_inputs = d_values @ self.weights.T
