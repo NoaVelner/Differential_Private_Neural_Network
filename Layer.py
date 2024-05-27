@@ -28,7 +28,7 @@ class FullyConnectedLayer:
         # define hyperparameters (for Adam optimizer)
         self.beta1 = 0.9
         self.beta2 = 0.999
-        self.epsilon = 1e-8
+        self.offset = 1e-8
 
         self.output = None
 
@@ -44,7 +44,6 @@ class FullyConnectedLayer:
         """
         self.x = x
         z = (self.x @ self.weights) + self.biases
-        # z = np.dot(self.x, self.weights) + self.biases  # using np.dot instead of @, might be less efficient
 
         self.activate_activation_function(z)
         return self.output
@@ -66,7 +65,7 @@ class FullyConnectedLayer:
         else:
             raise ValueError(f"Please define new activation function for the activation you gave")
 
-    def backward(self, d_values: np.ndarray, learning_rate: float, t: int):
+    def backward(self, d_values: np.ndarray, learning_rate: float, t: int, clipping_radius = np.inf, noise_factor = 0.):
         """
         Backpropagation.
         This function will derivative the activation function, and then calculate the
@@ -77,20 +76,24 @@ class FullyConnectedLayer:
             d_values (float): Derivative of the output
             learning_rate (float): Learning rate for gradient descent
             t (int): Timestep
+            :param clipping_radius:
         Returns:
             Tensor: Derivative with respect to the inputs.
+
         """
         d_values = self.derivative_activation_function(d_values)
 
         d_weights = self.x.T @ d_values
-        # d_weights = np.dot(self.x.T, d_values)                #using np.dot instead of @, might be less efficient
         d_biases = np.sum(d_values, axis=0, keepdims=True)
 
-        d_biases, d_weights = self.clipping(d_biases, d_weights)
+        d_biases, d_weights = self.clipping(d_biases, d_weights, clipping_radius) # todo check the clipping method
+
+        # Add noise for differential privacy - 27.5
+        d_weights += np.random.normal(0, noise_factor, size=d_weights.shape) # todo check if add noise to both of them
+        d_biases += np.random.normal(0, noise_factor, size=d_biases.shape)
 
         # Calculate the gradient with respect to the input
         d_inputs = d_values @ self.weights.T
-        # d_inputs = np.dot(d_values, self.weights.T)
 
         # Update the weights and biases using the learning rate and their derivatives
         self.weights -= learning_rate * d_weights
@@ -102,6 +105,43 @@ class FullyConnectedLayer:
         self.update_parameters({'param': self.biases, 'm': self.m_biases, 'v': self.v_biases},
                                                     d_biases, t, learning_rate)
         return d_inputs
+    #
+    # def backward(self, d_values: np.ndarray, learning_rate: float, t: int):
+    #     """
+    #     Backpropagation.
+    #     This function will derivative the activation function, and then calculate the
+    #     derivative once with respect to the bias and oe with respect to the weight.
+    #     Those values might be very small, so we will clip them to keep numerical stability.
+    #
+    #     Args:
+    #         d_values (float): Derivative of the output
+    #         learning_rate (float): Learning rate for gradient descent
+    #         t (int): Timestep
+    #     Returns:
+    #         Tensor: Derivative with respect to the inputs.
+    #     """
+    #     d_values = self.derivative_activation_function(d_values)
+    #
+    #     d_weights = self.x.T @ d_values
+    #     # d_weights = np.dot(self.x.T, d_values)                #using np.dot instead of @, might be less efficient
+    #     d_biases = np.sum(d_values, axis=0, keepdims=True)
+    #
+    #     d_biases, d_weights = self.clipping(d_biases, d_weights)
+    #
+    #     # Calculate the gradient with respect to the input
+    #     d_inputs = d_values @ self.weights.T
+    #     # d_inputs = np.dot(d_values, self.weights.T)
+    #
+    #     # Update the weights and biases using the learning rate and their derivatives
+    #     self.weights -= learning_rate * d_weights
+    #     self.biases -= learning_rate * d_biases
+    #
+    #     # Update weights & biases using m and v values
+    #     self.update_parameters({'param': self.weights, 'm': self.m_weights, 'v': self.v_weights},
+    #                                                   d_weights, t, learning_rate)
+    #     self.update_parameters({'param': self.biases, 'm': self.m_biases, 'v': self.v_biases},
+    #                                                 d_biases, t, learning_rate)
+    #     return d_inputs
 
     def update_parameters(self, parameters, d_parameters, t, learning_rate):
         """
@@ -121,9 +161,10 @@ class FullyConnectedLayer:
         m_hat = m / (1 - self.beta1 ** t)
         v_hat = v / (1 - self.beta2 ** t)
 
-        parameters['param'] -= learning_rate * m_hat / (np.sqrt(v_hat) + self.epsilon)
+        parameters['param'] -= learning_rate * m_hat / (np.sqrt(v_hat) + self.offset)
 
-    def clipping(self, d_biases, d_weights):
+    def clipping(self, d_biases, d_weights, clipping_radius = np.inf):
+    # def clipping(self, d_biases, d_weights):  # origin 22.5
         """
         Clip gradients to avoid exploding gradients.
 
@@ -134,10 +175,8 @@ class FullyConnectedLayer:
         Returns:
             Tuple[Tensor, Tensor]: Clipped gradients.
         """
-        # d_weights = np.clip(d_weights, -1.0, 1.0)
-        # d_biases = np.clip(d_biases, -1.0, 1.0)
-        # return d_biases, d_weights
-        return np.clip(d_biases, -1.0, 1.0), np.clip(d_weights, -1.0, 1.0)
+        return np.clip(d_biases, -clipping_radius, clipping_radius), np.clip(d_weights, -clipping_radius, clipping_radius)
+        # return np.clip(d_biases, -1.0, 1.0), np.clip(d_weights, -1.0, 1.0)  #origin 22.5
 
     def derivative_activation_function(self, d_values: np.ndarray) -> np.ndarray:
         """
@@ -154,9 +193,7 @@ class FullyConnectedLayer:
                 if len(gradient.shape) == 1:  # single instance case
                     gradient = gradient.reshape(-1, 1)
                 jacobian_matrix = np.diagflat(gradient) - (gradient @ gradient.T)
-                # jacobian_matrix = np.diagflat(gradient) - np.dot(gradient, gradient.T)  #np.dot replaced with @
                 d_values[i] = jacobian_matrix@ self.output[i]
-                # d_values[i] = np.dot(jacobian_matrix, self.output[i])
 
         # Calculate the derivative of the ReLU function
         elif self.activation == "relu":

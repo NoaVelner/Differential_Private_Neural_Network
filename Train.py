@@ -95,9 +95,9 @@ class CreateModel:
         output_grad = 6 * (output - targets) / output.shape[0]
         time += 1
         learning_rate = initial_learning_rate / (1 + decay * epoch)
-        grad_3 = self.layer3.backward(output_grad, learning_rate, time)
-        grad_2 = self.layer2.backward(grad_3, learning_rate, time)
-        grad_1 = self.layer1.backward(grad_2, learning_rate, time)
+        grad_3 = self.layer3.backward(output_grad, learning_rate, time, noise_factor=0.01/(1 + decay * epoch))
+        grad_2 = self.layer2.backward(grad_3, learning_rate, time, noise_factor=0.01/(1 + decay * epoch))
+        grad_1 = self.layer1.backward(grad_2, learning_rate, time, noise_factor=0.01/(1 + decay * epoch))
 
     def get_prediction(self, samples):
         return self.forward(inputs=samples)
