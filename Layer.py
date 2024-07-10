@@ -12,7 +12,6 @@ class FullyConnectedLayer:
             output_size (int): Output of the layer
             activation (str): activation function
         """
-        self.x = None
         self.activation = activation
 
         # Initialize weights and biases
@@ -30,8 +29,6 @@ class FullyConnectedLayer:
         self.beta2 = 0.999
         self.offset = 1e-8
 
-        self.output = None
-
     def forward(self, x: np.ndarray) -> np.ndarray:
         """
         Perform forward propagation through the layer.
@@ -45,10 +42,10 @@ class FullyConnectedLayer:
         self.x = x
         z = (self.x @ self.weights) + self.biases
 
-        self.activate_activation_function(z)
+        self.output = self._apply_activation(z)
         return self.output
 
-    def activate_activation_function(self, z: np.ndarray) -> None:
+    def _apply_activation(self, z: np.ndarray) -> None:
         """
         Apply activation function on the input.
 
@@ -56,16 +53,16 @@ class FullyConnectedLayer:
             z (Tensor): Input for the activation function.
         """
         if self.activation == "relu":
-            self.output = np.maximum(0, z)
+            return np.maximum(0, z)
 
         elif self.activation == "softmax":
             exp_values = np.exp(z - np.max(z, axis=-1, keepdims=True))
-            self.output = exp_values / np.sum(exp_values, axis=-1, keepdims=True)
+            return exp_values / np.sum(exp_values, axis=-1, keepdims=True)
 
         else:
             raise ValueError(f"Please define new activation function for the activation you gave")
 
-    def backward(self, d_values: np.ndarray, learning_rate: float, t: int, clipping_radius = np.inf, noise_factor = 0.):
+    def backward(self, d_values: np.ndarray, learning_rate: float, t: int, clipping_radius=None, noise_factor=0.):
         """
         Backpropagation.
         This function will derivative the activation function, and then calculate the
@@ -82,15 +79,17 @@ class FullyConnectedLayer:
 
         """
         d_values = self.derivative_activation_function(d_values)
-
         d_weights = self.x.T @ d_values
         d_biases = np.sum(d_values, axis=0, keepdims=True)
 
-        d_biases, d_weights = self.clipping(d_biases, d_weights, clipping_radius) # todo check the clipping method
+        if clipping_radius:
+            d_weights = self._clipping(d_weights, clipping_radius)  # todo check the clipping method
+            d_biases = self._clipping(d_biases, clipping_radius)
 
-        if noise_factor!=0:
+        if noise_factor != 0:
             # Add noise for differential privacy - 27.5
-            d_weights += np.random.normal(0, noise_factor, size=d_weights.shape) # todo check if add noise to both of them
+            d_weights += np.random.normal(0, noise_factor,
+                                          size=d_weights.shape)  # todo check if add noise to both of them
             d_biases += np.random.normal(0, noise_factor, size=d_biases.shape)
 
         # Calculate the gradient with respect to the input
@@ -101,11 +100,12 @@ class FullyConnectedLayer:
         self.biases -= learning_rate * d_biases
 
         # Update weights & biases using m and v values
-        self.update_parameters({'param': self.weights, 'm': self.m_weights, 'v': self.v_weights},
-                                                      d_weights, t, learning_rate)
-        self.update_parameters({'param': self.biases, 'm': self.m_biases, 'v': self.v_biases},
-                                                    d_biases, t, learning_rate)
+        self._update_parameters({'param': self.weights, 'm': self.m_weights, 'v': self.v_weights}, d_weights, t,
+                                learning_rate)
+        self._update_parameters({'param': self.biases, 'm': self.m_biases, 'v': self.v_biases}, d_biases, t,
+                                learning_rate)
         return d_inputs
+
     #
     # def backward(self, d_values: np.ndarray, learning_rate: float, t: int):
     #     """
@@ -144,28 +144,28 @@ class FullyConnectedLayer:
     #                                                 d_biases, t, learning_rate)
     #     return d_inputs
 
-    def update_parameters(self, parameters, d_parameters, t, learning_rate):
+    def _update_parameters(self, params, d_params, t, learning_rate):
         """
         Update parameters using Adam optimizer.
 
         Args:
-            parameters (dict): Dictionary containing parameters and their moment estimates.
-            d_parameters (Tensor): Gradient of parameters.
+            params (dict): Dictionary containing parameters and their moment estimates.
+            d_params (Tensor): Gradient of parameters.
             t (int): Timestep.
             learning_rate (float): Learning rate.
 
         Returns:
             Tuple[np.Tensor, np.Tensor]: Updated moment estimates.
         """
-        m = self.beta1 * parameters['m'] + (1 - self.beta1) * d_parameters
-        v = self.beta2 * parameters['v'] + (1 - self.beta2) * (d_parameters ** 2)
+        m = self.beta1 * params['m'] + (1 - self.beta1) * d_params
+        v = self.beta2 * params['v'] + (1 - self.beta2) * (d_params ** 2)
         m_hat = m / (1 - self.beta1 ** t)
         v_hat = v / (1 - self.beta2 ** t)
 
-        parameters['param'] -= learning_rate * m_hat / (np.sqrt(v_hat) + self.offset)
+        params['param'] -= learning_rate * m_hat / (np.sqrt(v_hat) + self.offset)
 
-    def clipping(self, d_biases, d_weights, clipping_radius = np.inf):
-    # def clipping(self, d_biases, d_weights):  # origin 22.5
+    def _clipping(self, vec, clipping_radius):
+        # def clipping(self, d_biases, d_weights):  # origin 22.5
         """
         Clip gradients to avoid exploding gradients.
 
@@ -176,7 +176,11 @@ class FullyConnectedLayer:
         Returns:
             Tuple[Tensor, Tensor]: Clipped gradients.
         """
-        return np.clip(d_biases, -clipping_radius, clipping_radius), np.clip(d_weights, -clipping_radius, clipping_radius)
+        gradient_norm = np.linalg.norm(vec)
+        clipped_gradient = np.minimum(gradient_norm, clipping_radius)
+        print((vec * (clipped_gradient / gradient_norm)).shape)
+        return vec * (clipped_gradient / gradient_norm)
+        # return np.clip(vec, -clipping_radius, clipping_radius)
         # return np.clip(d_biases, -1.0, 1.0), np.clip(d_weights, -1.0, 1.0)  #origin 22.5
 
     def derivative_activation_function(self, d_values: np.ndarray) -> np.ndarray:
@@ -194,7 +198,7 @@ class FullyConnectedLayer:
                 if len(gradient.shape) == 1:  # single instance case
                     gradient = gradient.reshape(-1, 1)
                 jacobian_matrix = np.diagflat(gradient) - (gradient @ gradient.T)
-                d_values[i] = jacobian_matrix@ self.output[i]
+                d_values[i] = jacobian_matrix @ self.output[i]
 
         # Calculate the derivative of the ReLU function
         elif self.activation == "relu":
