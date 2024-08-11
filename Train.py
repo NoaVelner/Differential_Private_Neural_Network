@@ -118,6 +118,7 @@ class CreateModel:
         predictions = self.get_prediction(x_test)
         return Utils.calculate_loss_crossentropy(predictions, y_test)
 
+
     def test_accuracy(self, x_test: np.ndarray, y_test: np.ndarray) -> float:
         """
         Calculate the test accuracy of the model.
@@ -149,6 +150,50 @@ def load_mnist() -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     X_train = X_train.astype("float32") / 255.0
     Y_train = to_categorical(Y_train)
     return X_train, Y_train, X_test, Y_test
+
+
+
+def calculate_total_epsilon(epsilon_per_epoch, n_epochs, delta):
+    # Example: Simple composition (not optimal for large n_epochs)
+    total_epsilon = np.sqrt(2 * n_epochs * np.log(1.25 / delta)) * epsilon_per_epoch
+    return total_epsilon
+
+def clip_gradients(gradients, clipping_bound):
+    # Compute the L2 norm of the gradient
+    norm = np.linalg.norm(gradients)
+
+    # Clip the gradient if the norm is greater than the clipping bound
+    if norm > clipping_bound:
+        gradients = (clipping_bound / norm) * gradients
+
+    return gradients
+
+def train_with_dp(model, data, targets, n_epochs, learning_rate, clipping_bound, epsilon, delta):
+    # Calculate the noise scale
+    sigma = (clipping_bound * np.sqrt(2 * np.log(1.25 / delta))) / epsilon
+
+    for epoch in range(n_epochs):
+        # Forward pass: Compute predictions and loss
+        outputs = model.forward(data)
+        loss = Utils.calculate_loss_crossentropy(outputs, targets)
+        accuracy = Utils.accuracy(outputs, targets)
+
+        # Backward pass: Compute gradients
+        gradients = model.backward(loss)
+
+        # Clip gradients
+        clipped_gradients = clip_gradients(gradients, clipping_bound)
+
+        # Add noise to gradients
+        noisy_gradients = clipped_gradients + np.random.normal(0, sigma, clipped_gradients.shape)
+
+        # Update model parameters using the noisy gradients
+        model.update_parameters(noisy_gradients, learning_rate)
+
+    # After training, calculate the overall privacy budget (epsilon)
+    # This can be done using the advanced composition theorem or moment accountant.
+    total_epsilon = calculate_total_epsilon(epsilon, n_epochs, delta)
+    return model, total_epsilon
 
 
 
