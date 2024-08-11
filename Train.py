@@ -9,7 +9,6 @@ from Layer import FullyConnectedLayer  # Import custom layer
 from tensorflow.keras.datasets import mnist
 from tensorflow.keras.utils import to_categorical
 
-
 class CreateModel:
     def __init__(self, input_size: int, output_size: int, hidden_size: List[int], noise:float=0):
         """
@@ -99,9 +98,7 @@ class CreateModel:
         grad_3 = self.layer3.backward(output_grad, learning_rate, time)
         grad_2 = self.layer2.backward(grad_3, learning_rate, time)
         grad_1 = self.layer1.backward(grad_2, learning_rate, time)
-        # grad_3 = self.layer3.backward(output_grad, learning_rate, time, noise_factor=self.epsilon/(1 + decay * epoch))
-        # grad_2 = self.layer2.backward(grad_3, learning_rate, time, noise_factor=self.epsilon/(1 + decay * epoch))
-        # grad_1 = self.layer1.backward(grad_2, learning_rate, time, noise_factor=self.epsilon/(1 + decay * epoch))
+
 
     def get_prediction(self, samples):
         return self.forward(inputs=samples)
@@ -151,9 +148,6 @@ def load_mnist() -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     X_train = X_train.reshape((60000, 784))
     X_train = X_train.astype("float32") / 255.0
     Y_train = to_categorical(Y_train)
-
-    X_test = X_test.reshape((X_test.shape[0], -1))
-    Y_test = to_categorical(Y_test, num_classes=output_shape)
     return X_train, Y_train, X_test, Y_test
 
 
@@ -163,7 +157,10 @@ if __name__ == "__main__":
     input_shape = 784
     hidden_shape = [512, 512]
     output_shape = 10
+    x_test = x_test.reshape((x_test.shape[0], -1))
+    y_test = to_categorical(y_test, num_classes=output_shape)
+
     nn = CreateModel(input_size=input_shape, output_size=output_shape, hidden_size=hidden_shape, noise=0.01)
-    nn.train(x_train, y_train, initial_learning_rate=0.001, decay=0.001, n_epochs=100, plot_training_results=True)
+    nn.train(x_train, y_train, initial_learning_rate=0.001, decay=0.001, n_epochs=10, plot_training_results=True)
     print("Test Loss:", nn.test_loss(x_test, y_test))
     print("Test Accuracy:", nn.test_accuracy(x_test, y_test))
